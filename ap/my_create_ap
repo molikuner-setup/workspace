@@ -1,0 +1,111 @@
+#!/bin/bash
+RED='\033[0;31m'
+GREEN='\033[0;32m'
+ORANGE='\033[0;33m'
+NC='\033[0m'
+
+IFACE="$1"
+CONFDIR="$(pwd)/$IFACE/ap"
+
+SETMANAGED="1"
+
+function cleanUP() {
+  echo -ne "\n$(date) cleanup...  "
+  for x in $CONFDIR/*.pid; do
+    # even if the $CONFDIR is empty, the for loop will assign
+    # a value in $x. so we need to check if the value is a file
+    [[ -f $x ]] && (kill $(cat $x) || hardDie "could not kill all processes")
+  done
+  rm "$CONFDIR/hostapd.conf" 2>/dev/null
+  [ "$SETMANAGED" = "1" ] && (nmcli dev set $IFACE managed yes || hardDie "could not set $IFACE managed again")
+  if [ -d "$(pwd)/$IFACE" ]; then
+    [ -d "$CONFDIR" ] && [ "$(ls -A $CONFDIR)" ] || (rm -rf "$CONFDIR" || hardDie "could not delete conf folder: $CONFDIR")
+    if ! [ "$(ls -A $(pwd)/$IFACE)" ]; then
+      if ! rm -rf "$(pwd)/$IFACE"; then
+        echo -e "${ORANGE}WARN${NC}\n\t(failed to delete interface folder but it is empty)"
+        return
+      fi
+    fi
+  fi
+  echo -e "${GREEN}OK${NC}"
+}
+
+function die() {
+  echo -ne "${RED}FAILED${NC}"
+  [ "$1" ] && echo -n " caused by: $1"
+  cleanUP
+  echo "$(date) stopped script"
+  trap "" EXIT
+  [ "$1" ] && exit 1 || exit 255
+}
+
+function hardDie() {
+  echo -e "${RED}FAILED${NC}"
+  echo -n "$(date) failed unexpected again"
+  [ "$1" ] && echo -n " caused by: $1"
+  echo -e "\n\nYou need to manualy cleanup things..."
+  echo "  maybe you need to... TODO to be done"
+  echo "this is orderd by the order of the cleanUP"
+  echo " you can view the cause and do everything beginning with that"
+  trap "" EXIT
+  [ "$1" ] && exit 1 || exit 255
+}
+
+function finish() {
+  cleanUP
+  echo "$(date) stopped script"
+  trap "" EXIT
+  exit 0
+}
+
+function isWIFI() {
+  iw dev $IFACE info > /dev/null 2>&1 && return 0
+}
+
+if [ "$(whoami)" = "root" ] && [ "$IFACE" ]; then
+  trap "die" EXIT
+  echo "$(date) started srcipt"
+  echo -n "$(date) setup...   "
+  isWIFI || die "is no wifi interface"
+
+  mkdir -p "$CONFDIR"
+
+  cat << EOF > "$CONFDIR/hostapd.conf"
+ssid=FreeNet
+interface=${IFACE}
+driver=nl80211
+hw_mode=g
+channel=1
+ieee80211n=1
+wmm_enabled=1
+
+macaddr_acl=0
+auth_algs=1
+
+ctrl_interface=$CONFDIR/hostapd_ctrl
+ctrl_interface_group=0
+ignore_broadcast_ssid=0
+
+wpa=2
+wpa_passphrase=wpaPassword
+wpa_key_mgmt=WPA-PSK
+wpa_pairwise=TKIP CCMP
+rsn_pairwise=CCMP
+EOF
+  nmcli dev show $IFACE | grep GENERAL.STATE | grep 10 >/dev/null 2>&1 && SETMANAGED="0"
+  [ "$SETMANAGED" = "1" ] && (nmcli dev set $IFACE managed no || die "could not set $IFACE unmanaged")
+
+  sleep 2
+
+  trap "finish" EXIT
+  echo -e "${GREEN}OK${NC}"
+  hostapd "$CONFDIR/hostapd.conf" || die "hostapd failed, maybe you can see it from log"
+elif [ "$IFACE" ]; then
+  echo "running: sudo $0 $@"
+  sudo "$0" "$@"
+  exit;
+else
+  echo "using default iFace"
+  $0 "wls1" $@
+  exit $?;
+fi

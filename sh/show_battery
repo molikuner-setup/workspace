@@ -1,0 +1,14 @@
+#!/bin/bash
+
+while true; do
+  b="$(upower -i /org/freedesktop/UPower/devices/battery_BAT0 | grep --color=never -E 'state|time\ to|percentage')"
+  if [ "$a" != "$b" ]; then
+    echo ""
+    echo "$(date)"
+    echo -n "$b"
+    echo "$b" | grep "time\ to" >/dev/null 2>&1 || echo -ne "\n"
+    a="$b"
+  else
+    sleep 10
+  fi
+done

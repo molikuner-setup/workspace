@@ -1,0 +1,17 @@
+#!/bin/bash
+
+if [ $(whoami) != root ]; then
+  sudo $0 $@
+  exit $?
+fi
+
+ip link set dev br0 down 2>/dev/null
+brctl delbr br0 2>/dev/null
+nmcli dev set wls1 managed yes
+nmcli dev set enp1s0 managed yes
+ip addr flush dev wls1
+ip addr flush dev enp1s0
+iptables -t nat -F
+iptables -t nat -X
+killall dnsmasq 2>/dev/null
+killall hostapd 2>/dev/null

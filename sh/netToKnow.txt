@@ -1,0 +1,17 @@
+# no password for reboot for sudo group
+%sudo	ALL = NOPASSWD: /sbin/reboot
+
+# get specific state of repo in git folder
+git archive --output=name.tar 0hf8392
+
+# random number from 1 to 13
+echo $((1 + $RANDOM % 13))
+
+# inc number
+var=$((var+1))
+
+# do sth for each line
+CMD_WITH_MULTILINE | while IFS= read -r line; do CMD "$line"; done
+
+# get sizes of folders in current dir
+for i in */; do echo -en "...\t$i\r" && du -hs "$i"; done

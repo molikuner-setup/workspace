@@ -1,0 +1,53 @@
+#!/bin/bash
+NC='\033[0m'
+
+IFACE="$1"
+
+function getIP() {
+  ip addr show dev "$IFACE" | grep -Eo "(inet ([0-9]{1,3}\.){3}[0-9]{1,3}\/[0-9]+)|(inet6 [0-9a-zA-Z]{,5}:){1,7}[0-9a-zA-Z]{1,5}" |\
+    grep -Eo "(([0-9]{1,3}\.){3}[0-9]{1,3}\/[0-9]+)|([0-9a-zA-Z]{,5}:){1,7}[0-9a-zA-Z]{1,5}" || echo "no IP"
+}
+
+function checkDns() {
+  ps ax | grep --color=always dnsmasq | grep --color=never -v grep | grep $IFACE >/dev/null 2>&1 && echo "running" || echo "stopped"
+}
+
+function output() {
+  echo "$(date) $IFACE"
+  local ipBuffer=$([ "$1" ] && echo "$1" || getIP)
+  local dnsBuffer=$([ "$2" ] && echo "$2" || checkDns)
+  echo "$ipBuffer" | while IFS= read -r line; do echo "  $line"; done
+  echo "$dnsBuffer" | while IFS= read -r line; do echo "  $line"; done
+}
+
+function main() {
+  if [ "$IFACE" ] && ip add show dev "$IFACE" >/dev/null 2>&1; then
+    nmcli -c yes -t -f DEVICES,STATE dev monitor "$IFACE" | while IFS= read -r line; do echo -e "$line${NC}"; output; done &
+    while ip addr show dev "$IFACE" >/dev/null 2>&1; do
+      local ipbuffer=$(getIP);
+      local dnsbuffer=$(checkDns);
+      if [ "$ip" != "$ipbuffer" ] || [ "$dns" != "$dnsbuffer" ]; then
+        ip="$ipbuffer"
+        dns="$dnsbuffer"
+        output "$ip" "$dns"
+      else
+        sleep 2
+      fi
+    done
+    echo "$(date) exit caused by remove of iFace"
+  else
+    echo "USAGE: $(basename $0) [infinity] <interface>" >&2
+    exit 1;
+  fi
+}
+
+if [ "$1" = "infinity" ] && [ "$2" ]; then
+  ip add show dev "$2" >/dev/null 2>&1 || echo "iFace \"$2\" does not exists for now"
+  while true; do
+    $0 $2 2>/dev/null
+    sleep 2
+  done
+  exit
+else
+  main
+fi
