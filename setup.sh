@@ -136,16 +136,17 @@ simpleGitClone() {
   fi
 }
 
-if type "git" &>/dev/null && simpleQuestion "setup workspace"; then {
+if type "git" &>/dev/null && simpleQuestion "setup workspace"; then
   advancedRead "workspace path [~/workspace]: " "~/workspace" WORKSPACE_PATH
   simpleGitClone "molikuner-setup/workspace" "$WORKSPACE_PATH"
   simpleGitClone "molikuner-setup/config" "$WORKSPACE_PATH/config"
   simpleGitClone "robbyrussell/oh-my-zsh" "$WORKSPACE_PATH/oh-my-zsh"
-  simpleQuestion "copy configs into ~"; then
+  if simpleQuestion "copy configs into ~"; then
+    sed -i s/MOLIKUNER_CONF_DIR=\$HOME\/workspace/MOLIKUNER_CONF_DIR=$WORKSPACE_PATH/g $WORKSPACE_PATH/config/zsh/.zshrc
     cp $WORKSPACE_PATH/config/zsh/.zshrc ~
     cp $WORKSPACE_PATH/config/tmux/.tmux.conf ~
   fi
-}
+fi
 
 INSTALL_LIST_FLATPAK=""
 addInstallFlatpak() {
