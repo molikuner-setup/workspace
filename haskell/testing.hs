@@ -72,7 +72,22 @@ smartFlatten = put []
     put xs Nil           = xs
     put xs (Bin t1 a t2) = put (a : put xs t2) t1
 
+leftMost :: Tree a -> Maybe a
+leftMost Nil           = Nothing
+leftMost (Bin Nil a _) = Just a
+leftMost (Bin t _ _)   = leftMost t
 
--- leftMost
--- rightMost
+rightMost :: Tree a -> Maybe a
+rightMost Nil           = Nothing
+rightMost (Bin _ a Nil) = Just a
+rightMost (Bin _ _ t)   = rightMost t
+
+sort :: (a -> a -> Bool) -> [a] -> [a]
+sort _ [] = []
+sort f (a:xs) = insert a (sort f xs)
+  where
+    insert x [] = [x]
+    insert a (x:xs)
+      | f a x     = a:x:xs
+      | otherwise = x : insert a xs
 
