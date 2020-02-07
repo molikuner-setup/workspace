@@ -22,11 +22,11 @@ anyT :: (a -> Bool) -> Tree a -> Bool
 anyT f = orT . mapT f
 
 insert :: Ord a => a -> Tree a -> Tree a
-insert x Nil = Bin Nil x Nil
-insert x (Bin t1 a t2)
-  | a < x = Bin t1 a (insert x t2)
-  | a > x = Bin (insert x t1) a t2
-  | otherwise = Bin t1 a t2
+insert x Nil  = Bin Nil x Nil
+insert x t@(Bin t1 a t2)
+  | a < x     = Bin t1 a (insert x t2)
+  | a > x     = Bin (insert x t1) a t2
+  | otherwise = t
 
 member :: Ord a => a -> Tree a -> Bool
 member x = anyT ((==) x)
