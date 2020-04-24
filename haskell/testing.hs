@@ -1,3 +1,5 @@
+import Prelude hiding (min)
+
 data Tree a = Nil
             | Bin (Tree a) a (Tree a)
             deriving (Show)
@@ -90,4 +92,38 @@ sort f (a:xs) = insert a (sort f xs)
     insert a (x:xs)
       | f a x     = a:x:xs
       | otherwise = x : insert a xs
+
+-- filter :: (a -> Bool) -> [a] -> [a]
+-- filter _ [] = []
+-- filter f (x:xs)
+--   | f x       = x : filter f xs
+--   | otherwise = filter f xs
+
+partition :: (a -> Bool) -> [a] -> ([a],[a])
+partition _ [] = ([], [])
+partition f (x:xs)
+  | f x       = (a, x : b)
+  | otherwise = (x : a, b)
+  where
+    (a, b) = partition f xs
+
+quickSelect :: (a -> a -> Bool) -> Int -> [a] -> Maybe a
+quickSelect _ _ [] = Nothing
+quickSelect f n (x:xs)
+  | n <= 0 = Nothing
+  | i == n = Just x
+  | i < n  = quickSelect f (n - i) bigger
+  | i > n  = quickSelect f n smaller
+  where
+    (smaller, bigger) = partition (f x) xs
+    i                 = length smaller + 1
+
+min :: (a -> a -> Bool) -> [a] -> Maybe a
+min f = quickSelect f 1
+
+ordMin :: Ord a => [a] -> Maybe a
+ordMin = min (<)
+
+ordMax :: Ord a => [a] -> Maybe a
+ordMax = min (>)
 
