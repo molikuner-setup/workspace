@@ -28,6 +28,13 @@ shCmd() {
   fi
 }
 
+shouldShowForCommand() {
+  if [ "X$1" = "Xstatus" ] || [ "X$1" = "Xreconnect" ]; then return 0; fi
+  if [ "X$1" = "Xconnect" ] && [ "X$2" != "XConnected" ]; then return 0; fi
+  if [ "X$1" = "Xdisconnect" ] && [ "X$2" != "XDisconnected" ]; then return 0; fi
+  return 1;
+}
+
 main() {
   if [ $# -lt 1 ]; then
     cat << EOF
@@ -81,14 +88,16 @@ EOF
   "items": [
 EOF
     scutil --nc list | tail -n +2 | while IFS= read -r c; do
-      if [[ "$c" =~ $CONNECTION_REGEX ]]; then
+      if [[ "$c" =~ $CONNECTION_REGEX ]] && shouldShowForCommand $COMMAND ${BASH_REMATCH[2]}; then
         local VALID=`[ "X$COMMAND" != "Xstatus" ] && [ '*' = "${BASH_REMATCH[1]}" ] && echo "true" || echo "false"`
         local STATUS="${BASH_REMATCH[2]}"
         local UUID="${BASH_REMATCH[3]}";
         local NAME="${BASH_REMATCH[5]}";
         local SEARCH="`echo \"$@\" | tr [:upper:] [:lower:]`";
         local LNAME="`echo \"$NAME\" | tr [:upper:] [:lower:]`";
-        ( [ "X$@" = "X" ] || [[ $LNAME = *$SEARCH* ]] ) && cat << EOF
+        ( [ "X$@" = "X" ] || \
+          [[ $LNAME = *$SEARCH* ]] ) && \
+          cat << EOF
     {
       "valid": $VALID,
       "uid": "$UUID",
